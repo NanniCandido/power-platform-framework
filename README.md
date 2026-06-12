@@ -2,7 +2,7 @@
 
 **Institution:** Foresight Atlantic Inc.  
 **Duration:** 2026 – Present  
-**Role:** Business Manager / Process Automation Developer  
+**Role:** General Manager / Business Process Automation Analyst  
 **Note:** Due to confidentiality, company data, real flow definitions, service account details, URLs, IDs, internal records, and business-sensitive information cannot be shared. This case study describes the architecture, design patterns, and development approach without exposing confidential data.
 
 ---
