@@ -78,7 +78,7 @@ SharePoint List - Request Tracking
 Request Type Evaluation
     ↓
 Child Flow - Timesheet Approval
-    ├── Direct executive approval
+    ├── Direct manager approval
     ├── Scope - Main
     ├── Scope - Error Handling
     └── Return standardized result/message to Parent Flow
@@ -93,9 +93,9 @@ Child Flow - Expense Approval
     └── Return standardized result/message to Parent Flow
     ↓
 Parent Flow evaluates child flow response
-    ├── result = succeeded
+    ├── result = Succeeded
     │       └── Continue normal request status update
-    └── result = failed
+    └── result = Failed
             └── Trigger error handling and monitoring
                     ├── Post message to Microsoft Teams Channel
                     │       └── IT - Automation Alerts / General
@@ -163,15 +163,14 @@ The parent flow manages the common request intake process.
 
 Main responsibilities include:
 
-* Reading Microsoft Forms responses
-* Retrieving submitter profile information
-* Creating the main request item in SharePoint
-* Adding uploaded attachments to the SharePoint List item
-* Identifying the request type
-* Calling the appropriate child flow
-* Receiving standardized child flow outputs
-* Evaluating success or failure responses
-* Triggering operational alerts when needed
+* Retrieving the SharePoint request item
+* Retrieving related attachments
+* Building attachment arrays for email and approvals
+* Sending approval requests to the appropriate reviewer or approver
+* Processing approval outcomes
+* Updating SharePoint request status
+* Returning standardized execution results to the parent flow
+* Handling process-specific errors
 
 The parent flow acts as the main orchestrator of the framework.
 
@@ -191,7 +190,7 @@ Main responsibilities include:
 * Retrieving the SharePoint request item
 * Retrieving related attachments
 * Building attachment arrays for email and approvals
-* Sending approval requests to the appropriate manager
+* Sending approval requests to the appropriate reviewer or approver
 * Processing approval outcomes
 * Updating SharePoint request status
 * Returning standardized execution results to the parent flow
