@@ -198,7 +198,7 @@ Each child flow returns a standardized response, such as:
 
 ```json
 {
-  "result": "Success",
+  "result": "Succeeded",
   "message": "Completed"
 }
 ```
@@ -207,7 +207,7 @@ or:
 
 ```json
 {
-  "result": "Error",
+  "result": "Failed",
   "message": "Approval failed."
 }
 ```
@@ -356,15 +356,15 @@ A naming convention was adopted to improve readability, troubleshooting, and mai
 Examples of naming standards include:
 
 ```text
-DEV_PA_WF_Request_Create
-DEV_PA_WF_Request_Update
-DEV_PA_WF_Request_Timesheet
-DEV_PA_WF_Request_Expense
+DEV_FA_WF_Request_Create
+DEV_FA_WF_Request_Update
+DEV_FA_WF_Request_Timesheet
+DEV_FA_WF_Request_Expense
 
-PA_WF_Request_Create
-PA_WF_Request_Update
-PA_WF_Request_Timesheet
-PA_WF_Request_Expense
+FA_WF_Request_Create
+FA_WF_Request_Update
+FA_WF_Request_Timesheet
+FA_WF_Request_Expense
 
 vFlowName
 vEnvironment (DEV or PRD)
