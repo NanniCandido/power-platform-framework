@@ -78,19 +78,24 @@ SharePoint List - Request Tracking
 Request Type Evaluation
     ↓
 Child Flow - Timesheet Approval
+    ├── Direct executive approval
     ├── Scope - Main
     ├── Scope - Error Handling
     └── Return standardized result/message to Parent Flow
 
 Child Flow - Expense Approval
+    ├── First-level administrative review
+    ├── Correction loop when required
+    ├── Resubmission through SharePoint button
+    ├── Executive approval
     ├── Scope - Main
     ├── Scope - Error Handling
     └── Return standardized result/message to Parent Flow
     ↓
 Parent Flow evaluates child flow response
-    ├── result = success
+    ├── result = succeeded
     │       └── Continue normal request status update
-    └── result = error
+    └── result = failed
             └── Trigger error handling and monitoring
                     ├── Post message to Microsoft Teams Channel
                     │       └── IT - Automation Alerts / General
@@ -99,11 +104,9 @@ Parent Flow evaluates child flow response
 SharePoint Status Updates
 ```
 
-The architecture was designed to separate normal business processing from operational monitoring and error handling.
-
-In the normal execution path, the flows process the request, send the required approval, evaluate the approval outcome, and update the SharePoint request status.
-
-Operational alerts through Microsoft Teams and the service account shared mailbox are mainly used for error handling, monitoring, and support visibility. If a child flow returns an error response, the parent flow evaluates the standardized result and message outputs and triggers the appropriate monitoring actions.
+The architecture was designed to support different approval paths depending on the request type.
+Timesheet requests follow a simpler path with direct manager approval, while expense requests follow a more complete lifecycle that may include first-level review, correction, resubmission, and executive approval.
+This asymmetrical design allowed the framework to support different business rules without duplicating the entire automation structure.
 
 Both parent and child flows follow the same structured pattern using:
 
@@ -246,28 +249,92 @@ This part of the project required extensive testing because attachment formats v
 
 ## ✅ Approval and Correction Logic
 
-The framework supports different approval outcomes and request states.
+The framework supports different approval paths depending on the request type.
 
-The approval logic includes:
+### Timesheet Approval Path
 
-* Manager approval
-* Rejection
-* Correction-required scenarios
-* Resubmission for review
-* SharePoint status updates
-* Conditional display of actions in SharePoint
-* Separate approval paths for different request types
+Timesheet requests follow a simplified approval process:
 
-Example request states:
+```text
+Submit request
+    ↓
+Manager approval
+    ↓
+Approved or Rejected
+    ↓
+SharePoint status update
+```
+
+This process does not include a correction loop in the initial implementation.
+
+### Expense Approval Path
+
+Expense requests follow a more complete approval lifecycle:
+
+```text
+Submit request
+    ↓
+First-level administrative review
+    ↓
+Needs Correction?
+    ├── Yes
+    │     ↓
+    │  Requester updates the item
+    │     ↓
+    │  Requester triggers resubmission using SharePoint button
+    │     ↓
+    │  Expense flow runs again
+    │
+    └── No
+          ↓
+      Executive approval
+          ↓
+      Approved or Rejected
+          ↓
+      SharePoint status update
+```
+
+This design allows the framework to handle both simple and more complex approval scenarios while keeping the parent-child flow architecture reusable.
+
+Example request statuses include:
 
 ```text
 Under Review
+Needs Correction
 Approved
 Rejected
-Needs Correction
 ```
 
-This allows the process to behave more like a controlled business workflow instead of a simple email-based approval.
+The correction and resubmission process is controlled through SharePoint fields and a button-triggered update flow, preventing unnecessary automatic reprocessing.
+
+---
+
+## 🔄 State Management and Concurrency Control
+
+The framework uses SharePoint fields to manage request state, control execution, and reduce the risk of duplicate processing.
+
+Key state management fields include:
+
+```text
+Status
+CorrectionRequired
+FlowLock
+ResubmissionCount
+```
+
+These fields help the automation determine:
+
+* The current business status of the request.
+* Whether a correction is required.
+* Whether the request is already being processed.
+* How many times the request has been resubmitted.
+* Whether a button-triggered update should be allowed.
+
+The `FlowLock` field acts as a safeguard against duplicate or concurrent executions, especially in scenarios where users may resubmit items or where multiple triggers could otherwise process the same request at the same time.
+
+The `ResubmissionCount` field supports auditability by tracking how many times a request has been returned for correction and resubmitted for review.
+
+This state management pattern helps make the workflow more controlled, traceable, and reliable.
 
 ---
 
@@ -356,15 +423,15 @@ A naming convention was adopted to improve readability, troubleshooting, and mai
 Examples of naming standards include:
 
 ```text
-DEV_FA_WF_Request_Create
-DEV_FA_WF_Request_Update
-DEV_FA_WF_Request_Timesheet
-DEV_FA_WF_Request_Expense
+DEV_PA_WF_Request_Create
+DEV_PA_WF_Request_Update
+DEV_PA_WF_Request_Timesheet
+DEV_PA_WF_Request_Expense
 
-FA_WF_Request_Create
-FA_WF_Request_Update
-FA_WF_Request_Timesheet
-FA_WF_Request_Expense
+PA_WF_Request_Create
+PA_WF_Request_Update
+PA_WF_Request_Timesheet
+PA_WF_Request_Expense
 
 vFlowName
 vEnvironment (DEV or PRD)
