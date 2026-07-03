@@ -326,7 +326,7 @@ These fields help the automation determine:
 * The current business status of the request.
 * Whether a correction is required.
 * Whether the request is already being processed.
-* How many times the request has been resubmitted.
+* How many times has the request been resubmitted?
 * Whether a button-triggered update should be allowed.
 
 The `FlowLock` field acts as a safeguard against duplicate or concurrent executions, especially in scenarios where users may resubmit items or where multiple triggers could otherwise process the same request at the same time.
@@ -467,6 +467,8 @@ The framework considers Power Platform solution concepts such as:
 
 This helps move the development approach away from isolated flows and toward a more structured solution design.
 
+The solution structure also includes a standardized connection reference model. Physical connections are created once using the service account, while each solution contains its own DEV or PRD connection references pointing to those shared service account connections. This allows the framework to maintain logical separation between development and production components without creating unnecessary duplicate physical connections in a single-environment setup.
+
 ---
 
 ## 🔐 Service Account Strategy
@@ -485,6 +487,71 @@ This approach helps ensure that:
 Additionally, a shared mailbox associated with the service account can be used for monitoring automation alerts and maintaining visibility across the support team.
 
 This was an important design consideration for building a more production-ready automation framework.
+
+The service account strategy was extended to connection governance. Instead of creating new connections every time a flow or app is created, the framework uses a controlled set of service account connections by connector type. These connections are then referenced inside each solution through standardized connection references.
+
+This reduces connection duplication, improves clarity, and makes future maintenance easier, especially when connections need to be reauthenticated, reviewed, or migrated.
+
+---
+
+## 🔌 Connection Governance
+
+As part of the framework, a connection governance model was implemented to reduce duplicated connections, improve maintainability, and ensure that flows and apps use a consistent service account strategy.
+
+Physical connections were created outside the solutions using the service account, following a standardized naming convention:
+
+```text
+SVC-SharePoint
+SVC-Office 365 Outlook
+SVC-Microsoft Teams
+SVC-Office 365 Users
+SVC-Approvals
+```
+
+These physical connections are reused by both development and production solutions.
+
+Inside each solution, connection references were created to provide a clear logical separation between DEV and PRD components, even though both solutions currently run in the same Power Platform environment.
+
+Examples:
+
+```text
+DEV-SVC-SharePoint
+DEV-SVC-Outlook
+DEV-SVC-Teams
+DEV-SVC-Office365Users
+DEV-SVC-Approvals
+
+PRD-SVC-SharePoint
+PRD-SVC-Outlook
+PRD-SVC-Teams
+PRD-SVC-Office365Users
+PRD-SVC-Approvals
+```
+
+Both DEV and PRD connection references point to the same underlying physical service account connections because the current setup uses a single environment.
+
+This model provides:
+
+* consistent use of the service account
+* fewer duplicated connections
+* easier troubleshooting
+* clearer separation between DEV and PRD solutions
+* better lifecycle management
+* improved maintainability of flows and apps
+* reduced risk of using personal or inconsistent connections
+
+The adopted pattern is:
+
+```text
+Physical connection:
+SVC-ConnectorName
+
+Solution connection reference:
+DEV-SVC-ConnectorName
+PRD-SVC-ConnectorName
+```
+
+This structure helps keep the framework organized and prepares the solution for future environment separation, if needed.
 
 ---
 
