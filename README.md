@@ -1,4 +1,4 @@
-# 🧩 Power Platform Business Process Automation Framework Architecture
+# 🧩 Power Platform Business Process Governance & Automation Framework Architecture
 
 **Institution:** Foresight Atlantic Inc.  
 **Duration:** 2026 – Present  
