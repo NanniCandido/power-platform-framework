@@ -6,7 +6,7 @@
 
 The framework provides a reusable approach for internal request intake, approval orchestration, business-status tracking, and operational monitoring. The initial use cases are timesheets and expense claims.
 
-## Architecture overview
+## Architecture Overview
 
 ```mermaid
 flowchart TD
