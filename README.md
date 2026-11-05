@@ -3,644 +3,130 @@
 **Institution:** Foresight Atlantic Inc.  
 **Duration:** 2026 – Present  
 **Role:** General Manager / Business Process Automation Analyst  
-**Note:** Due to confidentiality, company data, real flow definitions, service account details, URLs, IDs, internal records, and business-sensitive information cannot be shared. This case study describes the architecture, design patterns, and development approach without exposing confidential data.
+**Technology:** Power Automate · SharePoint Lists · Microsoft Forms · Approvals · Outlook · Microsoft Teams   
+**Confidentiality:** This documentation-only case study describes architecture, business process design, governance practices, and technical decisions. It does not share company data, actual flow definitions, credentials, internal URLs, identifiers, or sensitive records.
 
 ---
 
 ## 📌 Project Overview
 
-This project documents a reusable **Power Platform Business Process Automation Framework** designed to support internal request intake, approvals, notifications, tracking, monitoring, and error handling.
+A reusable Microsoft 365 and Power Platform framework for request intake, approval routing, correction and resubmission, business-level tracking, and operational monitoring. Its first use cases were **timesheet** and **expense claim** approvals.
 
-The initial implementation was applied to **timesheet** and **expense approval workflows**, but the framework was designed to be reusable for future business process automation initiatives.
+**Three principles guided the work:**
 
-The solution uses Microsoft 365 and Power Platform components such as:
-
-* Microsoft Forms
-* SharePoint Lists
-* Power Automate Cloud Flows
-* Power Automate Approvals
-* Outlook
-* Microsoft Teams
-* SharePoint attachments
-* Service account strategy
-
-The main objective was not only to automate approvals, but also to establish a maintainable and scalable development pattern for future internal automation projects.
+1. **Design for reuse:** Build a common automation foundation rather than isolated workflows.
+2. **Embed governance:** Make ownership, traceability, monitoring, and maintainability part of the design.
+3. **Start with the business process:** Adapt the technology to the rules and needs of each workflow—not the other way around.
 
 ---
 
-## 🎯 Business Problem
+## 🎯 Business Problem - STAR
 
-Internal requests such as timesheet submissions and expense claims were handled through manual or semi-manual processes involving forms, files, email communication, and manager approvals.
+### Situation
 
-Although the process appeared simple from the user perspective, the backend required a reliable structure to manage:
+Timesheets were signed on paper, while expense claims circulated as spreadsheets via email without a formal, centralized approval trail. Employees needed a simple experience; the organization needed consistent routing, visibility, reliable attachment handling, and controls for corrections and exceptions.
 
-* Request intake
-* Uploaded attachments
-* Approval routing
-* Email and Teams notifications
-* Correction requests
-* Resubmission logic
-* Error handling
-* Operational monitoring
-* Request tracking
-* Long-term maintainability
+### Task
 
-The challenge was to build a solution that was not only functional, but also traceable, reusable, and easier to maintain.
+Design and implement a maintainable framework that digitizes the initial approval processes while establishing a reusable pattern for future internal services, with stronger governance and business-level traceability.
 
----
+### Action
 
-## 🧭 Solution Overview
+- **Analyzed and redesigned approval processes**, translating different business rules into timesheet and expense workflows.
+- **Established a modular parent–child flow pattern** to centralize shared intake and orchestration while isolating process-specific approval logic.
+- **Implemented business controls** for request status, multi-level approvals, correction and resubmission, and safeguards against duplicate processing.
+- **Standardized operational monitoring**, including error-handling scopes, structured flow responses, and Teams/email alerts.
+- **Introduced governance practices** covering naming conventions, service-account connections, connection references, and solution organization.
+- **Validated end-user permissions** through end-to-end testing with user credentials rather than relying solely on administrator access.
 
-The solution was designed as a modular framework based on a **parent-child flow architecture**.
+### Results & business value
 
-The parent flow is responsible for the common intake and orchestration logic, while child flows are responsible for specific business approval processes.
+- Replaced paper timesheet sign-off with a traceable digital approval process.
+- Established a formal two-level expense approval process with a controlled correction and resubmission loop.
+- Created a common architecture that can support additional approval processes without rebuilding shared intake logic.
+- Improved visibility of request status and exceptions through SharePoint tracking and operational alerts.
+- Established reusable governance and maintenance practices for future automation initiatives.
 
-The first use cases implemented were:
+*Quantified outcomes such as approval turnaround time, hours saved, or request volumes have not yet been established and are not claimed here.*
 
-* Timesheet approval workflow
-* Expense claim approval workflow
+## Architecture overview
 
-However, the same framework can be adapted to other internal request and approval processes.
+One **parent flow** handles everything the processes share. One **child flow** per business process handles only what is different. To add a new approval type, you add a new child flow.
 
----
-
-## 🏗️ Framework Architecture
-
-```text
-Microsoft Forms
-    ↓
-Parent Flow - Submit a Request
-    ├── Scope - Main
-    └── Scope - Error Handling
-    ↓
-SharePoint List - Request Tracking
-    ↓
-Request Type Evaluation
-    ↓
-Child Flow - Timesheet Approval
-    ├── Direct manager approval
-    ├── Scope - Main
-    ├── Scope - Error Handling
-    └── Return standardized result/message to Parent Flow
-
-Child Flow - Expense Approval
-    ├── First-level administrative review
-    ├── Correction loop when required
-    ├── Resubmission through SharePoint button
-    ├── Executive approval
-    ├── Scope - Main
-    ├── Scope - Error Handling
-    └── Return standardized result/message to Parent Flow
-    ↓
-Parent Flow evaluates child flow response
-    ├── result = Succeeded
-    │       └── Continue normal request status update
-    └── result = Failed
-            └── Trigger error handling and monitoring
-                    ├── Post message to Microsoft Teams Channel
-                    │       └── IT - Automation Alerts / General
-                    └── Send email to Service Account Shared Mailbox
-    ↓
-SharePoint Status Updates
+```mermaid
+flowchart TD
+    A[Request submitted] --> B[Parent flow: intake and routing]
+    B --> C[(SharePoint: request tracking)]
+    B --> D{Request type}
+    D --> E[Timesheet child flow: manager approval]
+    D --> F[Expense child flow: administrative review]
+    F --> G{Correction needed?}
+    G -- Yes --> H[Requester corrects and resubmits]
+    H --> F
+    G -- No --> I[Executive approval]
+    E --> J[Standardized child result]
+    I --> J
+    J --> K{Parent evaluates result}
+    K -- Success --> C
+    K -- Failure --> L[Error handling and operational alerts]
 ```
 
-The architecture was designed to support different approval paths depending on the request type.
-Timesheet requests follow a simpler path with direct manager approval, while expense requests follow a more complete lifecycle that may include first-level review, correction, resubmission, and executive approval.
-This asymmetrical design allowed the framework to support different business rules without duplicating the entire automation structure.
+The parent flow handles shared intake and routing; child flows implement the approval rules specific to each request type. The technical documentation explains the flow responsibilities and execution details.
 
-Both parent and child flows follow the same structured pattern using:
+## Key design decisions
 
-Scope - Main
-Scope - Error Handling
+| Decision | Business and operational rationale |
+| --- | --- |
+| Parent–child flows and standardized results | Reuse common logic and simplify future process additions. |
+| SharePoint request tracking | Give business users visibility beyond technical run history. |
+| Correction and resubmission controls | Support realistic exception paths without uncontrolled reprocessing. |
+| Structured error handling and alerts | Make failures visible and easier to investigate. |
+| Service-account and connection governance | Reduce reliance on individual employees and improve continuity. |
+| Naming standards and solution organization | Improve maintainability and readiness for future lifecycle management. |
+| Connector-specific attachment handling | Preserve usable files across Forms, SharePoint, Outlook, and Approvals. |
 
-The architecture was designed around the following principles:
+**Current architecture constraint:** DEV and PRD are logically distinguished within a single Power Platform environment; this is not equivalent to physically separated development and production environments.
 
-* Modularity
-* Reusability
-* Separation of responsibilities
-* Traceability
-* Error visibility
-* Maintainability
-* Controlled ownership
-* Operational monitoring
+## A consistent approach across generations of technology
 
----
+Earlier in my career at the **Court of Accounts of Rio Grande do Sul (TCE-RS)**, I designed and automated business processes using Oracle Workflow and PL/SQL, combining AS-IS/TO-BE analysis, approval routing, legacy-system integration, and service-performance controls.
 
-## 🧩 Design Principles
+**The technology has evolved, but my approach to business process improvement remains the same:** understand the business, map the process, identify inefficiencies, redesign workflows, and use technology to deliver sustainable improvements.
 
-The framework was developed based on practical design principles commonly used in business process automation and enterprise workflow solutions.
+The Power Platform framework applies those same principles using modern low-code tools, with additional emphasis on reusable architecture, governance, and operational support.
 
-### Modularity
+## Key competencies demonstrated
 
-The automation was divided into parent and child flows to avoid large, hard-to-maintain workflows.
+**Business and process:** Business Process Analysis · Workflow Redesign · Process Standardization · Stakeholder Collaboration · Continuous Improvement
 
-### Reusability
+**Architecture and delivery:** Power Automate · Parent–Child Workflow Design · SharePoint Lists · Microsoft 365 Integration · Approval Automation · Exception Handling
 
-Common logic was centralized in the parent flow, while specific approval paths were handled by child flows.
+**Governance and operations:** IT Governance · Traceability · Service Account Strategy · Connection Governance · Naming Standards · Maintainability
 
-### Separation of Responsibilities
+## Lessons learned
 
-Each flow has a clear responsibility:
+- Low-code automation still requires business analysis and architectural discipline.
+- Business users need process-level visibility; technical run history alone is insufficient.
+- Error handling, connection ownership, and attachment compatibility should be designed early.
 
-* Parent flow: intake, orchestration, and routing
-* Child flows: business-specific approval logic
-* Error handling scopes: exception handling and notifications
-* SharePoint: request tracking and status visibility
+## Next steps
 
-### Traceability
+- Evaluate a Power Apps interface for request submission and tracking.
+- Strengthen application lifecycle management, including environment separation and environment variables.
+- Expand operational logs, retry handling, and reporting capabilities.
 
-SharePoint Lists are used to track the request lifecycle and provide visibility beyond Power Automate run history.
+## Technical documentation
 
-### Maintainability
+The README is the business-facing entry point. Supporting documents provide implementation-level detail:
 
-Naming conventions, standardized outputs, service account usage, and structured error handling were included to support future maintenance.
+| Topic | Documentation |
+| --- | --- |
+| Architecture and flow responsibilities | [`docs/architecture.md`](docs/architecture.md) |
+| Approval workflows and correction logic | [`docs/approval-workflows.md`](docs/approval-workflows.md) |
+| Attachment handling | [`docs/attachments.md`](docs/attachments.md) |
+| State management and duplicate-run safeguards | [`docs/state-management.md`](docs/state-management.md) |
+| Error handling and monitoring | [`docs/error-handling.md`](docs/error-handling.md) |
+| Service accounts, connections, naming, and security | [`docs/governance.md`](docs/governance.md) |
 
----
+*The linked documentation files are proposed repository structure and should be created before publishing these links.*
 
-## 🔁 Parent Flow Responsibilities
-
-The parent flow manages the common request intake process.
-
-Main responsibilities include:
-
-* Retrieving the SharePoint request item
-* Retrieving related attachments
-* Building attachment arrays for email and approvals
-* Sending approval requests to the appropriate reviewer or approver
-* Processing approval outcomes
-* Updating SharePoint request status
-* Returning standardized execution results to the parent flow
-* Handling process-specific errors
-
-The parent flow acts as the main orchestrator of the framework.
-
----
-
-## 🧩 Child Flow Responsibilities
-
-Each child flow is responsible for a specific business process.
-
-The initial implementation includes separate child flows for:
-
-* Timesheet approvals
-* Expense claim approvals
-
-Main responsibilities include:
-
-* Retrieving the SharePoint request item
-* Retrieving related attachments
-* Building attachment arrays for email and approvals
-* Sending approval requests to the appropriate reviewer or approver
-* Processing approval outcomes
-* Updating SharePoint request status
-* Returning standardized execution results to the parent flow
-* Handling process-specific errors
-
-Each child flow returns a standardized response, such as:
-
-```json
-{
-  "result": "Succeeded",
-  "message": "Completed"
-}
-```
-
-or:
-
-```json
-{
-  "result": "Failed",
-  "message": "Approval failed."
-}
-```
-
-This pattern allows the parent flow to evaluate child flow execution in a consistent way and trigger monitoring actions when needed.
-
----
-
-## 📎 Attachment Handling Strategy
-
-Attachment handling was one of the most complex parts of the solution.
-
-The framework supports attachments across different Microsoft 365 components, including:
-
-* Microsoft Forms file uploads
-* SharePoint List attachments
-* Outlook email attachments
-* Power Automate Approval attachments
-
-Different connectors require different attachment structures. The solution standardized attachment handling for each scenario and ensured that file name, content type, and file content were preserved correctly.
-
-Special attention was given to:
-
-* File name handling
-* Content type preservation
-* Base64 content handling
-* SharePoint attachment creation
-* Approval attachment formatting
-* Email attachment formatting
-* Troubleshooting corrupted attachments
-* Avoiding dependency on manual file handling
-
-This part of the project required extensive testing because attachment formats vary depending on the connector and action used.
-
----
-
-## ✅ Approval and Correction Logic
-
-The framework supports different approval paths depending on the request type.
-
-### Timesheet Approval Path
-
-Timesheet requests follow a simplified approval process:
-
-```text
-Submit request
-    ↓
-Manager approval
-    ↓
-Approved or Rejected
-    ↓
-SharePoint status update
-```
-
-This process does not include a correction loop in the initial implementation.
-
-### Expense Approval Path
-
-Expense requests follow a more complete approval lifecycle:
-
-```text
-Submit request
-    ↓
-First-level administrative review
-    ↓
-Needs Correction?
-    ├── Yes
-    │     ↓
-    │  Requester updates the item
-    │     ↓
-    │  Requester triggers resubmission using SharePoint button
-    │     ↓
-    │  Expense flow runs again
-    │
-    └── No
-          ↓
-      Executive approval
-          ↓
-      Approved or Rejected
-          ↓
-      SharePoint status update
-```
-
-This design allows the framework to handle both simple and more complex approval scenarios while keeping the parent-child flow architecture reusable.
-
-Example request statuses include:
-
-```text
-Under Review
-Needs Correction
-Approved
-Rejected
-```
-
-The correction and resubmission process is controlled through SharePoint fields and a button-triggered update flow, preventing unnecessary automatic reprocessing.
-
----
-
-## 🔄 State Management and Concurrency Control
-
-The framework uses SharePoint fields to manage request state, control execution, and reduce the risk of duplicate processing.
-
-Key state management fields include:
-
-```text
-Status
-CorrectionRequired
-FlowLock
-ResubmissionCount
-```
-
-These fields help the automation determine:
-
-* The current business status of the request.
-* Whether a correction is required.
-* Whether the request is already being processed.
-* How many times has the request been resubmitted?
-* Whether a button-triggered update should be allowed.
-
-The `FlowLock` field acts as a safeguard against duplicate or concurrent executions, especially in scenarios where users may resubmit items or where multiple triggers could otherwise process the same request at the same time.
-
-The `ResubmissionCount` field supports auditability by tracking how many times a request has been returned for correction and resubmitted for review.
-
-This state management pattern helps make the workflow more controlled, traceable, and reliable.
-
----
-
-## 🚨 Error Handling and Monitoring
-
-Structured error handling was included as a core part of the framework.
-
-The flows use dedicated scopes such as:
-
-```text
-Scope - Main
-Scope - Error Handling
-```
-
-To improve monitoring and troubleshooting, three standard variables are initialized across all flows:
-
-```text
-vFlowName
-vEnvironment (DEV or PRD)
-vArea (Sales, HR, Operations, etc.)
-```
-
-These variables are included in notifications, logs, and error messages to provide context about where an issue occurred and which business area is affected.
-
-When an error occurs, the framework can:
-
-* Capture relevant execution details
-* Return a standardized error message
-* Notify the responsible team
-* Send email alerts
-* Post operational messages in Microsoft Teams
-* Update SharePoint request status when needed
-* Improve troubleshooting through consistent messages
-
-The objective is to avoid silent failures and make automation issues visible to the support or operations team.
-
----
-
-## 📣 Teams and Email Notification Strategy
-
-The solution uses both Outlook and Microsoft Teams for communication.
-
-Communication and monitoring messages may include:
-
-* Approval requests
-* Approval outcomes
-* Correction requests
-* Error alerts
-* Operational monitoring messages
-
-Microsoft Teams is used as an internal visibility channel for automation-related messages, including alerts posted to dedicated channels such as **IT - Automation Alerts / General**.
-
-Outlook is used for targeted notifications, approval-related communication, and service account monitoring through a shared mailbox accessible by authorized team members.
-
-This strategy improves operational awareness and reduces dependency on manually checking the Power Automate run history.
-
----
-
-## 🗂️ SharePoint Tracking and Audit Trail
-
-SharePoint Lists are used as a lightweight process database to store request information and status.
-
-Tracked information may include:
-
-* Request type
-* Submitter
-* Submission date
-* Manager or approver
-* Current status
-* Correction required flag
-* Approval outcome
-* Error message
-* Last update date
-* Attachment references
-
-This provides business-level visibility into each request.
-
-Instead of relying only on the technical Power Automate run history, users and administrators can monitor request progress through SharePoint views.
-
----
-
-## 🧾 Naming Convention
-
-A naming convention was adopted to improve readability, troubleshooting, and maintainability.
-
-Examples of naming standards include:
-
-```text
-DEV_PA_WF_Request_Create
-DEV_PA_WF_Request_Update
-DEV_PA_WF_Request_Timesheet
-DEV_PA_WF_Request_Expense
-
-PA_WF_Request_Create
-PA_WF_Request_Update
-PA_WF_Request_Timesheet
-PA_WF_Request_Expense
-
-vFlowName
-vEnvironment (DEV or PRD)
-vArea (Sales, HR, Operations)
-
-vAttachmentsEmail
-vAttachmentsApproval
-vResult
-vMessage
-
-Scope - Main
-Scope - Error Handling
-```
-
-The naming convention clearly distinguishes development and production environments while maintaining consistency across solutions.
-
-The goal was to make each flow component easier to understand, maintain, and reuse.
-
----
-
-## 🧰 Power Platform Solution Structure
-
-The automation was designed with future maintainability in mind.
-
-The framework considers Power Platform solution concepts such as:
-
-* Solution-aware flows
-* Reusable child flows
-* Connection references
-* Environment readiness
-* Future export/import possibilities
-* Better lifecycle management
-* Preparation for ALM practices
-
-This helps move the development approach away from isolated flows and toward a more structured solution design.
-
-The solution structure also includes a standardized connection reference model. Physical connections are created once using the service account, while each solution contains its own DEV or PRD connection references pointing to those shared service account connections. This allows the framework to maintain logical separation between development and production components without creating unnecessary duplicate physical connections in a single-environment setup.
-
----
-
-## 🔐 Service Account Strategy
-
-A service account strategy was considered to reduce dependency on personal user connections and improve operational continuity.
-
-This approach helps ensure that:
-
-* Flows are not dependent on a single employee account
-* Connections are easier to manage
-* Notifications come from a predictable identity
-* Ownership is more centralized
-* Long-term maintenance is more reliable
-* The solution is less vulnerable to staff changes or account deactivation
-
-Additionally, a shared mailbox associated with the service account can be used for monitoring automation alerts and maintaining visibility across the support team.
-
-This was an important design consideration for building a more production-ready automation framework.
-
-The service account strategy was extended to connection governance. Instead of creating new connections every time a flow or app is created, the framework uses a controlled set of service account connections by connector type. These connections are then referenced inside each solution through standardized connection references.
-
-This reduces connection duplication, improves clarity, and makes future maintenance easier, especially when connections need to be reauthenticated, reviewed, or migrated.
-
----
-
-## 🔌 Connection Governance
-
-As part of the framework, a connection governance model was implemented to reduce duplicated connections, improve maintainability, and ensure that flows and apps use a consistent service account strategy.
-
-Physical connections were created outside the solutions using the service account, following a standardized naming convention:
-
-```text
-SVC-SharePoint
-SVC-Office 365 Outlook
-SVC-Microsoft Teams
-SVC-Office 365 Users
-SVC-Approvals
-```
-
-These physical connections are reused by both development and production solutions.
-
-Inside each solution, connection references were created to provide a clear logical separation between DEV and PRD components, even though both solutions currently run in the same Power Platform environment.
-
-Examples:
-
-```text
-DEV-SVC-SharePoint
-DEV-SVC-Outlook
-DEV-SVC-Teams
-DEV-SVC-Office365Users
-DEV-SVC-Approvals
-
-PRD-SVC-SharePoint
-PRD-SVC-Outlook
-PRD-SVC-Teams
-PRD-SVC-Office365Users
-PRD-SVC-Approvals
-```
-
-Both DEV and PRD connection references point to the same underlying physical service account connections because the current setup uses a single environment.
-
-This model provides:
-
-* consistent use of the service account
-* fewer duplicated connections
-* easier troubleshooting
-* clearer separation between DEV and PRD solutions
-* better lifecycle management
-* improved maintainability of flows and apps
-* reduced risk of using personal or inconsistent connections
-
-The adopted pattern is:
-
-```text
-Physical connection:
-SVC-ConnectorName
-
-Solution connection reference:
-DEV-SVC-ConnectorName
-PRD-SVC-ConnectorName
-```
-
-This structure helps keep the framework organized and prepares the solution for future environment separation, if needed.
-
----
-
-## 🔒 Security and Access Considerations
-
-The framework considers security and access control as part of the automation design.
-
-Key considerations include:
-
-* SharePoint List permissions
-* Access to submitted attachments
-* Visibility of approval records
-* Service account permissions
-* Teams channel access
-* Email notification recipients
-* Protection of sensitive request data
-* Controlled ownership of flows and connections
-
-The objective is to balance usability, transparency, and data protection.
-
----
-
-## 🧠 Lessons Learned
-
-This project provided significant practical learning in Power Platform and Microsoft 365 automation.
-
-Key lessons learned include:
-
-* Low-code platforms still require strong architectural thinking.
-* Attachment handling can vary significantly across Microsoft connectors.
-* SharePoint, Outlook, Teams, Forms, and Approvals each handle file content differently.
-* Error handling should be designed from the beginning, not added at the end.
-* Parent-child flow architecture improves modularity and maintainability.
-* Service accounts and naming conventions are important for production-grade automation.
-* SharePoint can work as a lightweight process tracking layer for internal workflows.
-* Power Automate run history is useful for technical troubleshooting, but business users need process-level tracking.
-* Business users may only see the approval screen, but the real value of the solution is in the reliability, traceability, and maintainability behind the scenes.
-
----
-
-## 🚀 Future Improvements
-
-Potential future enhancements include:
-
-* Creating a Power Apps front-end for request submission and tracking
-* Building a request timeline view
-* Creating a SharePoint-based flow log list
-* Adding Power BI dashboards for monitoring requests and flow performance
-* Improving request status visibility for submitters and managers
-* Expanding the framework to other internal approval processes
-* Introducing Dataverse for more structured process data management
-* Implementing environment variables
-* Strengthening ALM practices
-* Creating reusable templates for future automation projects
-* Documenting standard operating procedures for flow maintenance
-* Improving exception handling and retry strategies
-
----
-
-## 🛠️ Skills & Tools
-
-* Power Platform
-* Power Automate Cloud Flows
-* Parent-child flow architecture
-* Microsoft Forms
-* SharePoint Lists
-* SharePoint attachments
-* Power Automate Approvals
-* Outlook automation
-* Microsoft Teams notifications
-* Error handling and monitoring
-* Service account strategy
-* Naming conventions
-* Workflow design
-* Business process automation
-* Process tracking
-* Approval workflow design
-* Microsoft 365 automation
-* Low-code development
-* Business process analysis
-* Solution documentation
-* Governance and maintainability
-* Process improvement
-* Digital transformation
-
----
-
-## 📎 Confidentiality Note
-
-This repository does not include real company data, production flow exports, internal URLs, service account details, approval records, employee information, or confidential business documents.
-
-The content is presented as a professional case study focused on architecture, design patterns, lessons learned, and reusable automation concepts.
